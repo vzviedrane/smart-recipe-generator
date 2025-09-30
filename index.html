@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Recipe Generator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Smart Recipe Generator</h1>
+    <p>Start typing ingredients and press Enter or comma:</p>
+
+    <div id="ingredientSection">
+      <div id="ingredientList" class="ingredient-list"></div>
+      <input type="text" id="ingredientInput" placeholder="e.g. eggs, milk..." />
+      <div class="buttons">
+        <button onclick="getRecipes()">Find Recipes</button>
+        <button class="clear" onclick="clearIngredients()">Clear Ingredients</button>
+        <button class="suggest" onclick="suggestIngredients()">Try Default (Pancakes)</button>
+      </div>
+    </div>
+
+    <div id="loading" style="display:none;">Loading recipes...</div>
+
+    <div id="recipesSection">
+      <h2>You can cook these now 🍳</h2>
+      <div id="exactRecipes"></div>
+
+      <h2>You'll need to buy a few things 🛒</h2>
+      <div id="partialRecipes"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

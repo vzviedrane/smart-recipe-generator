@@ -1,5 +1,7 @@
 # Smart Recipe Generator
 
+**🌐 Live demo:** https://vzviedrane.github.io/smart-recipe-generator/
+
 **Video demo:** https://youtu.be/8HakqFD6clY  
 
 This is my final project for **CS50x**.  

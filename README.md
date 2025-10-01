@@ -26,19 +26,29 @@ So I built a small web app that suggests recipes based on ingredients you alread
 - Emoji categories (🥞 🍝 🍰) for quick recognition.
 - Works on mobile and desktop.
 - Loading spinner and small alerts to improve UX.
+- **Demo mode:** runs on GitHub Pages with sample recipes (no API key needed).
 
 ---
 
 ## 🧰 Tech stack
-- HTML, CSS, JavaScript (no frameworks)
-- Spoonacular REST API
+- HTML, CSS, Vanilla JavaScript  
+- Spoonacular REST API (for local use with API key)
 
 ---
 
 ## 🚀 How to run
+
+### Option 1: Demo mode (GitHub Pages)
+- Open the [live demo](https://vzviedrane.github.io/smart-recipe-generator/).
+- The app will load `demo.json` with sample recipes (no API key required).
+
+### Option 2: Local mode (with real API key)
 1. Get a free API key from [Spoonacular](https://spoonacular.com/food-api).
-2. Replace `YOUR_SPOONACULAR_API_KEY` in `script.js`.
-3. Open `index.html` in a browser and start typing ingredients.
+2. Create a file `config.js` in the project root:
+   ```js
+   window.SPOONACULAR_API_KEY = "YOUR_KEY_HERE";
+3. Make sure config.js is in .gitignore (do not commit).
+4. Open index.html in a browser (or use Live Server).
 
 
 ---

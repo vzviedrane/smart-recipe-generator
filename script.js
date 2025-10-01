@@ -1,44 +1,55 @@
-// Store ingredients input by user as lowercase strings
+// Store user ingredients (always lowercase)
 let ingredients = [];
 
-// Listen for Enter or comma key to add ingredient
-document.getElementById("ingredientInput").addEventListener("keydown", function (e) {
-  if (e.key === "Enter" || e.key === ",") {
-    e.preventDefault();
-    addIngredient(this.value.trim());
-    this.value = "";
-  }
-});
+// Try to get API key from local config.js
+const apiKey = typeof window !== "undefined" ? window.SPOONACULAR_API_KEY : undefined;
+// If no key → run in DEMO mode (for GitHub Pages)
+const DEMO_MODE = !apiKey;
+
+// Input listener (Enter or comma adds ingredient)
+const inputEl = document.getElementById("ingredientInput");
+if (inputEl) {
+  inputEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addIngredient(this.value.trim());
+      this.value = "";
+    }
+  });
+}
 
 /**
- * Adds an ingredient to the list if not already included
+ * Add an ingredient if not empty or duplicate
  */
 function addIngredient(name) {
-  if (!name || ingredients.includes(name.toLowerCase())) return;
-  ingredients.push(name.toLowerCase());
+  if (!name) return;
+  const clean = name.toLowerCase();
+  if (ingredients.includes(clean)) return;
+  ingredients.push(clean);
   updateIngredientList();
 }
 
 /**
- * Removes an ingredient when user clicks the ×
+ * Remove an ingredient by name
  */
 function removeIngredient(name) {
-  ingredients = ingredients.filter(i => i !== name);
+  const target = (name || "").toLowerCase();
+  ingredients = ingredients.filter((i) => i !== target);
   updateIngredientList();
 }
 
 /**
- * Clears all ingredients and recipe results
+ * Clear all ingredients and results
  */
 function clearIngredients() {
   ingredients = [];
   updateIngredientList();
-  document.getElementById("exactRecipes").innerHTML = "";
-  document.getElementById("partialRecipes").innerHTML = "";
+  setHTML("exactRecipes", "");
+  setHTML("partialRecipes", "");
 }
 
 /**
- * Adds a set of suggested ingredients (e.g. for pancakes)
+ * Add a quick suggestion (example: pancakes)
  */
 function suggestIngredients() {
   ingredients = ["eggs", "milk", "flour", "sugar"];
@@ -46,112 +57,187 @@ function suggestIngredients() {
 }
 
 /**
- * Visually updates the ingredient pills shown in UI
+ * Update ingredient pills in UI
  */
 function updateIngredientList() {
   const list = document.getElementById("ingredientList");
+  if (!list) return;
+
   list.innerHTML = "";
-  ingredients.forEach(ing => {
+  ingredients.forEach((ing) => {
     const pill = document.createElement("div");
     pill.className = "ingredient-pill";
-    pill.innerHTML = `${ing} <span onclick="removeIngredient('${ing}')">×</span>`;
+    pill.innerHTML = `${ing} <span title="Remove" onclick="removeIngredient('${ing}')">×</span>`;
     list.appendChild(pill);
   });
 }
 
 /**
- * Fetches recipes from Spoonacular API using ingredients input
- * Sorts them into full-match (exact) and partial-match (with missing ingredients)
- * Limits results to 5 to reduce API usage
+ * Utility: set HTML of element
  */
-async function getRecipes() {'z
+function setHTML(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}
+
+/**
+ * Show/hide loading spinner
+ */
+function setLoading(isLoading) {
+  const spinner = document.getElementById("loading");
+  if (!spinner) return;
+  spinner.style.display = isLoading ? "block" : "none";
+}
+
+/**
+ * Fetch recipes:
+ * - If DEMO_MODE → read from demo.json
+ * - Else → request Spoonacular API
+ */
+async function fetchRecipesByIngredients(ings) {
+  if (DEMO_MODE) {
+    const resp = await fetch("demo.json");
+    if (!resp.ok) throw new Error("Failed to load demo.json");
+    return await resp.json();
+  }
+
+  const url =
+    "https://api.spoonacular.com/recipes/findByIngredients" +
+    `?ingredients=${encodeURIComponent(ings.join(","))}` +
+    `&number=5&apiKey=${apiKey}`;
+
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error("Spoonacular findByIngredients failed");
+  return await resp.json();
+}
+
+/**
+ * Fetch recipe details (instructions, time, dishTypes)
+ */
+async function fetchRecipeInfo(id) {
+  if (DEMO_MODE) {
+    return {
+      instructions: "Demo instructions: mix, cook, serve.",
+      readyInMinutes: 15,
+      dishTypes: ["breakfast"],
+    };
+  }
+
+  const infoUrl = `https://api.spoonacular.com/recipes/${id}/information?apiKey=${apiKey}`;
+  const resp = await fetch(infoUrl);
+  if (!resp.ok) throw new Error("Spoonacular information failed");
+  return await resp.json();
+}
+
+/**
+ * Main entry — get and display recipes
+ */
+async function getRecipes() {
   if (ingredients.length === 0) {
     alert("Please enter at least one ingredient.");
     return;
   }
 
-  const apiKey = window.SPOONACULAR_API_KEY;
-  const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${encodeURIComponent(ingredients.join(","))}&number=5&apiKey=${apiKey}`;
+  if (DEMO_MODE) {
+    console.info(
+      "Running in DEMO MODE (no API key found). Loading recipes from demo.json."
+    );
+  }
 
-  document.getElementById("loading").style.display = "block";
+  setLoading(true);
 
   try {
-    const response = await fetch(url);
-    let data = await response.json();
+    let data = await fetchRecipesByIngredients(ingredients);
 
-    // Handle empty API results
-    if (!data || data.length === 0) {
-      document.getElementById("exactRecipes").innerHTML = "<p>No recipes found. Try adding flour, butter, or eggs.</p>";
-      document.getElementById("partialRecipes").innerHTML = "";
+    if (!Array.isArray(data) || data.length === 0) {
+      setHTML(
+        "exactRecipes",
+        "<p>No recipes found. Try adding flour, butter, or eggs.</p>"
+      );
+      setHTML("partialRecipes", "");
       return;
     }
 
-    // Separate recipes by how many ingredients are missing
     const exactRecipes = [];
     const partialRecipes = [];
 
     for (const recipe of data) {
-      // Fetch full instructions and metadata
-      const infoUrl = `https://api.spoonacular.com/recipes/${recipe.id}/information?apiKey=${apiKey}`;
-      const infoRes = await fetch(infoUrl);
-      const info = await infoRes.json();
+      let info = {};
+      try {
+        info = await fetchRecipeInfo(recipe.id);
+      } catch (e) {
+        console.warn("Failed to fetch recipe info:", e);
+      }
 
-      recipe.fullInstructions = info.instructions || "No instructions available.";
-      recipe.readyInMinutes = info.readyInMinutes;
-      recipe.dishTypes = info.dishTypes;
+      const fullInstructions =
+        recipe.fullInstructions ||
+        info.instructions ||
+        "No instructions available.";
+      const readyInMinutes = recipe.readyInMinutes || info.readyInMinutes || 15;
+      const dishTypes = recipe.dishTypes || info.dishTypes || [];
 
-      if (recipe.missedIngredientCount === 0) {
-        exactRecipes.push(recipe);
+      const enriched = {
+        ...recipe,
+        fullInstructions,
+        readyInMinutes,
+        dishTypes,
+      };
+
+      if ((recipe.missedIngredientCount || 0) === 0) {
+        exactRecipes.push(enriched);
       } else {
-        partialRecipes.push(recipe);
+        partialRecipes.push(enriched);
       }
     }
 
-    // If no exact matches, show fallback pancake recipe
     if (exactRecipes.length === 0) {
       exactRecipes.push({
         title: "🥞 Classic Pancakes (Suggested)",
-        image: "https://spoonacular.com/recipeImages/605213-556x370.jpg",
+        image: "https://via.placeholder.com/556x370?text=Pancakes",
         readyInMinutes: 20,
-        fullInstructions: "Mix eggs, milk, flour, and sugar. Pour onto a hot pan. Flip when bubbles form. Serve with syrup!",
+        fullInstructions:
+          "Mix eggs, milk, flour, and sugar. Pour onto a hot pan. Flip when bubbles form. Serve with syrup!",
         missedIngredients: [],
-        dishTypes: ["breakfast"]
+        dishTypes: ["breakfast"],
       });
     }
 
-    // Show recipes in UI
     displayRecipes(exactRecipes, "exactRecipes");
     displayRecipes(partialRecipes, "partialRecipes");
 
-    // Scroll smoothly to result area
-    document.getElementById("recipesSection").scrollIntoView({ behavior: "smooth" });
-
+    const section = document.getElementById("recipesSection");
+    if (section) section.scrollIntoView({ behavior: "smooth" });
   } catch (error) {
     console.error("Error fetching recipes:", error);
-    alert("Something went wrong. Please try again later.");
+    alert(
+      DEMO_MODE
+        ? "Demo data failed to load. Please check demo.json."
+        : "Something went wrong while fetching recipes. Please try again later."
+    );
   } finally {
-    document.getElementById("loading").style.display = "none";
+    setLoading(false);
   }
 }
 
 /**
- * Renders recipe cards for each recipe in a section (exact or partial)
- * Adds dish type emoji based on recipe metadata
+ * Render recipe cards
  */
 function displayRecipes(recipes, containerId) {
   const container = document.getElementById(containerId);
+  if (!container) return;
+
   container.innerHTML = "";
 
-  if (recipes.length === 0) {
+  if (!recipes || recipes.length === 0) {
     container.innerHTML = "<p>No recipes found.</p>";
     return;
   }
 
-  recipes.forEach(recipe => {
-    const missed = recipe.missedIngredients?.map(ing => ing.name).join(", ") || "None";
+  recipes.forEach((recipe) => {
+    const missed =
+      recipe.missedIngredients?.map((ing) => ing.name).join(", ") || "None";
     const dishType = recipe.dishTypes?.[0] || "meal";
 
-    // Map dish types to emojis for visual categorization
     const emojiMap = {
       breakfast: "🍳",
       lunch: "🥪",
@@ -160,37 +246,41 @@ function displayRecipes(recipes, containerId) {
       appetizer: "🥗",
       salad: "🥗",
       soup: "🍲",
-      snack: "🍿"
+      snack: "🍿",
     };
     const emoji = emojiMap[dishType] || "🍽️";
 
-    // Create card
     const card = document.createElement("div");
     card.className = "recipe-card";
     card.innerHTML = `
-      <h3>${emoji} ${recipe.title}</h3>
-      <p><strong>Cook Time:</strong> ${recipe.readyInMinutes} minutes</p>
-      <p><strong>Missing Ingredients:</strong> ${missed}</p>
-      <img src="${recipe.image}" alt="${recipe.title}" />
+      <h3>${emoji} ${escapeHTML(recipe.title)}</h3>
+      <p><strong>Cook Time:</strong> ${Number(recipe.readyInMinutes) || 15} minutes</p>
+      <p><strong>Missing Ingredients:</strong> ${escapeHTML(missed)}</p>
+      <img src="${escapeAttr(recipe.image)}" alt="${escapeAttr(recipe.title)}" />
       <button onclick="toggleInstructions(this)">Show Recipe</button>
       <div class="instructions" style="display:none;">${recipe.fullInstructions}</div>
     `;
-
     container.appendChild(card);
   });
 }
 
 /**
- * Toggle show/hide instructions on button click
- * Instructions appear inline under the image
+ * Toggle recipe instructions
  */
 function toggleInstructions(button) {
   const instructions = button.nextElementSibling;
-  if (instructions.style.display === "none") {
-    instructions.style.display = "block";
-    button.textContent = "Hide Recipe";
-  } else {
-    instructions.style.display = "none";
-    button.textContent = "Show Recipe";
-  }
+  const isHidden = instructions.style.display === "none";
+  instructions.style.display = isHidden ? "block" : "none";
+  button.textContent = isHidden ? "Hide Recipe" : "Show Recipe";
+}
+
+/* ---------- Small helpers ---------- */
+function escapeHTML(str = "") {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+function escapeAttr(str = "") {
+  return String(str).replaceAll('"', "&quot;");
 }

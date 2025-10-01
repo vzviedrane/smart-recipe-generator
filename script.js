@@ -70,7 +70,7 @@ async function getRecipes() {'z
     return;
   }
 
-  const apiKey = "9671e34262544737ae665c0086fcadbd";
+  const apiKey = window.SPOONACULAR_API_KEY;
   const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${encodeURIComponent(ingredients.join(","))}&number=5&apiKey=${apiKey}`;
 
   document.getElementById("loading").style.display = "block";

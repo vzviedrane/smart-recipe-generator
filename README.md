@@ -40,10 +40,6 @@ So I built a small web app that suggests recipes based on ingredients you alread
 2. Replace `YOUR_SPOONACULAR_API_KEY` in `script.js`.
 3. Open `index.html` in a browser and start typing ingredients.
 
----
-
-## 📸 Screenshots
-*(add 1–2 images of the app here)*
 
 ---
 

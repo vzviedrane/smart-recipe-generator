@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1001,
+    "title": "🥞 Demo Pancakes",
+    "missedIngredientCount": 0,
+    "readyInMinutes": 15,
+    "image": "https://via.placeholder.com/556x370?text=Demo+Pancakes",
+    "fullInstructions": "Mix flour, milk, eggs, and sugar. Pour onto a hot pan, flip once, and serve warm with syrup.",
+    "missedIngredients": [],
+    "dishTypes": ["breakfast"]
+  },
+  {
+    "id": 1002,
+    "title": "🍝 Demo Pasta",
+    "missedIngredientCount": 2,
+    "readyInMinutes": 25,
+    "image": "https://via.placeholder.com/556x370?text=Demo+Pasta",
+    "fullInstructions": "Boil pasta, prepare tomato sauce, mix together and serve with cheese.",
+    "missedIngredients": [{ "name": "tomato sauce" }, { "name": "cheese" }],
+    "dishTypes": ["lunch"]
+  },
+  {
+    "id": 1003,
+    "title": "🥗 Demo Salad",
+    "missedIngredientCount": 1,
+    "readyInMinutes": 10,
+    "image": "https://via.placeholder.com/556x370?text=Demo+Salad",
+    "fullInstructions": "Chop lettuce, cucumber, and tomatoes. Add olive oil and mix.",
+    "missedIngredients": [{ "name": "olive oil" }],
+    "dishTypes": ["salad"]
+  }
+]
